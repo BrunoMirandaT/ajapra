@@ -26,7 +26,6 @@ html {
   font-size: 16px;
 }
 
-
 body {
   margin: 0;
   background: var(--bg);
@@ -35,12 +34,12 @@ body {
   line-height: 1.5;
 }
 
-
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   line-height: 1.2;
   margin: 0;
 }
-
 
 h1 {
   font-size: 1.6rem;
@@ -59,6 +58,7 @@ a {
 }
 
 /* ---------- Layout ---------- */
+
 body:not(.auth) {
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr);
@@ -87,8 +87,7 @@ body:not(.auth) {
 }
 
 .brand-mark {
-  width: 80px;
-  height: 80px;
+  font-size: 1.7rem;
 }
 
 .brand strong {
@@ -148,12 +147,12 @@ body:not(.auth) {
   border-color: rgba(255,255,255,.3);
 }
 
-.content { 
+.content {
   padding: 28px clamp(16px, 3vw, 40px) 60px;
-  max-width: 1600px; 
-  width: 100%; 
-  min-width: 0; 
-  margin-inline: auto; 
+  max-width: 1600px;
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
 }
 
 .loading {
@@ -175,6 +174,7 @@ body:not(.auth) {
 }
 
 /* ---------- Componentes ---------- */
+
 .card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -183,7 +183,9 @@ body:not(.auth) {
   padding: 18px;
 }
 
-.card + .card, .card + .grid-2, .grid-2 + .card {
+.card + .card,
+.card + .grid-2,
+.grid-2 + .card {
   margin-top: 16px;
 }
 
@@ -240,7 +242,11 @@ body:not(.auth) {
   padding: 10px;
 }
 
-.btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .chip:focus-visible {
+.btn:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.chip:focus-visible {
   outline: 3px solid rgba(15,118,110,.35);
   outline-offset: 1px;
 }
@@ -291,7 +297,9 @@ body:not(.auth) {
   letter-spacing: .03em;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   font: inherit;
   padding: 8px 10px;
   border: 1px solid #cfc9bb;
@@ -375,12 +383,39 @@ td.actions .btn {
   margin-left: 4px;
 }
 
-.count {
-  margin: 0;
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
   padding: 10px 14px;
   color: var(--muted);
   font-size: .85rem;
   border-top: 1px solid var(--line);
+}
+
+.pager .ctl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pager select {
+  width: auto;
+  padding: 4px 8px;
+}
+
+.btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
 }
 
 .empty {
@@ -399,7 +434,9 @@ td.actions .btn {
   color: #444;
 }
 
-.badge.disponivel, .badge.realizada, .badge.true {
+.badge.disponivel,
+.badge.realizada,
+.badge.true {
   background: var(--good-soft);
   color: var(--good);
 }
@@ -409,17 +446,20 @@ td.actions .btn {
   color: var(--primary-dark);
 }
 
-.badge.em_tratamento, .badge.planejada {
+.badge.em_tratamento,
+.badge.planejada {
   background: var(--warn-soft);
   color: #8a5a00;
 }
 
-.badge.cancelada, .badge.false {
+.badge.cancelada,
+.badge.false {
   background: var(--danger-soft);
   color: var(--danger);
 }
 
 /* ---------- Modal ---------- */
+
 dialog.modal {
   border: 0;
   border-radius: 14px;
@@ -440,7 +480,8 @@ dialog .form {
   gap: 14px;
 }
 
-dialog header, dialog footer {
+dialog header,
+dialog footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -469,6 +510,7 @@ dialog footer {
 }
 
 /* ---------- Cartões de números ---------- */
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -541,6 +583,7 @@ dialog footer {
 }
 
 /* ---------- Gráficos (SVG) ---------- */
+
 svg {
   max-width: 100%;
   height: auto;
@@ -557,12 +600,14 @@ svg .axis {
   font-size: 11px;
 }
 
-svg .bar.s0, .sw.s0 {
+svg .bar.s0,
+.sw.s0 {
   fill: var(--primary);
   background: var(--primary);
 }
 
-svg .bar.s1, .sw.s1 {
+svg .bar.s1,
+.sw.s1 {
   fill: var(--accent);
   background: var(--accent);
 }
@@ -650,6 +695,7 @@ svg .dot-f {
 }
 
 /* ---------- Calendário ---------- */
+
 .cal-head {
   display: flex;
   align-items: center;
@@ -763,6 +809,7 @@ svg .dot-f {
 }
 
 /* ---------- Previsão ---------- */
+
 .forecast-note {
   background: var(--warn-soft);
   color: #6b4700;
@@ -814,6 +861,7 @@ svg .dot-f {
 }
 
 /* ---------- Toasts ---------- */
+
 .toasts {
   position: fixed;
   right: 16px;
@@ -838,6 +886,7 @@ svg .dot-f {
 }
 
 /* ---------- Login ---------- */
+
 body.auth {
   display: grid;
   place-items: center;
@@ -876,6 +925,7 @@ body.auth {
 }
 
 /* ---------- Responsivo ---------- */
+
 @media (max-width: 860px) {
   body:not(.auth) {
     grid-template-columns: minmax(0, 1fr);
@@ -927,21 +977,23 @@ body.auth {
   .hbar {
     grid-template-columns: 90px 1fr 34px;
   }
-
 }
 
 @media print {
-  .sidebar, .filters, .btn, .toasts {
+  .sidebar,
+  .filters,
+  .btn,
+  .toasts {
     display: none !important;
   }
 
   body:not(.auth) {
     display: block;
   }
-
 }
 
 /* ---- Balão de valores nos gráficos ---- */
+
 .chart-wrap {
   position: relative;
 }
@@ -983,7 +1035,8 @@ svg .hit {
   outline: none;
 }
 
-svg .hit.f:hover, svg .hit.f:focus {
+svg .hit.f:hover,
+svg .hit.f:focus {
   fill: rgba(217,119,6,.25);
 }
 

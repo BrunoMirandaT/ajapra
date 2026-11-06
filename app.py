@@ -110,6 +110,24 @@ def create_app(config: dict | None = None) -> Flask:
     def json_error(msg: str, status: int = 400, campos: dict | None = None):
         return jsonify({"erro": msg, "campos": campos or {}}), status
 
+    def paged(rows):
+        """Sem ?pagina= devolve a lista inteira. Com ?pagina=N&por_pagina=M devolve só a página
+        (máx. 200 por página); totais nos cabeçalhos X-Total-Count, X-Page, X-Per-Page e X-Total-Pages."""
+        if request.args.get("pagina") is None:
+            return jsonify(rows)
+        try:
+            page = max(int(request.args["pagina"]), 1)
+            per = min(max(int(request.args.get("por_pagina", 25)), 1), 200)
+        except ValueError:
+            return json_error("Parâmetros de paginação inválidos.", 422)
+        total = len(rows)
+        pages = max(-(-total // per), 1)
+        page = min(page, pages)  # página além do fim devolve a última
+        resp = jsonify(rows[(page - 1) * per: page * per])
+        resp.headers.update({"X-Total-Count": str(total), "X-Page": str(page),
+                             "X-Per-Page": str(per), "X-Total-Pages": str(pages)})
+        return resp
+
     def current_user():
         if "user" not in g:
             uid = session.get("uid")
@@ -254,8 +272,8 @@ def create_app(config: dict | None = None) -> Flask:
         def list_():
             rows = [r for r in _out(store.list(col)) if filt(r, request.args)]
             key, reverse = sort
-            rows.sort(key=key, reverse=reverse)
-            return jsonify(rows)
+            rows.sort(key=lambda r: (key(r), r["id"]), reverse=reverse)  # desempate por id: páginas estáveis
+            return paged(rows)
 
         @login_required
         def get_(rid):
@@ -469,7 +487,7 @@ def create_app(config: dict | None = None) -> Flask:
     @admin_required
     def usuarios_list():
         rows = sorted(store.list("usuarios"), key=lambda u: V.norm(u.get("nome", "")))
-        return jsonify([_public_user(u) for u in rows])
+        return paged([_public_user(u) for u in rows])
 
     @app.post("/api/usuarios")
     @admin_required

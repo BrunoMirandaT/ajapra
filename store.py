@@ -1,12 +1,16 @@
-"""Camada de persistência: Firebase Firestore.
+"""Camada de persistência: Firebase Firestore (acesso direto) + cache em memória (cache.py).
 
 Coleções: usuarios, animais, adotantes, adocoes, atividades.
 Todo registro retornado é um dict que inclui o campo "id" (ID do documento).
 """
 from __future__ import annotations
 
+from cache import CachedStore
+
 
 class FirestoreStore:
+    """Acesso direto ao Firestore. Use através de CachedStore (ver make_store)."""
+
     def __init__(self, credentials_path: str = ""):
         import firebase_admin
         from firebase_admin import credentials, firestore
@@ -22,30 +26,25 @@ class FirestoreStore:
     def list(self, col: str) -> list[dict]:
         return [{**d.to_dict(), "id": d.id} for d in self.db.collection(col).stream()]
 
-    def get(self, col: str, doc_id: str) -> dict | None:
-        d = self.db.collection(col).document(doc_id).get()
-        return {**d.to_dict(), "id": d.id} if d.exists else None
-
     def create(self, col: str, data: dict) -> dict:
         ref = self.db.collection(col).document()
         payload = {k: v for k, v in data.items() if k != "id"}
         ref.set(payload)
         return {**payload, "id": ref.id}
 
-    def update(self, col: str, doc_id: str, data: dict) -> dict | None:
-        ref = self.db.collection(col).document(doc_id)
-        if not ref.get().exists:
-            return None
-        ref.update({k: v for k, v in data.items() if k != "id"})
-        return self.get(col, doc_id)
+    def set_fields(self, col: str, doc_id: str, data: dict) -> bool:
+        """Atualiza campos sem ler o documento antes. False se o documento não existir."""
+        from google.api_core.exceptions import NotFound
 
-    def delete(self, col: str, doc_id: str) -> bool:
-        ref = self.db.collection(col).document(doc_id)
-        if not ref.get().exists:
+        try:
+            self.db.collection(col).document(doc_id).update(data)
+            return True
+        except NotFound:
             return False
-        ref.delete()
-        return True
+
+    def remove(self, col: str, doc_id: str) -> None:
+        self.db.collection(col).document(doc_id).delete()
 
 
-def make_store(cfg) -> FirestoreStore:
-    return FirestoreStore(cfg.get("FIREBASE_CREDENTIALS", ""))
+def make_store(cfg) -> CachedStore:
+    return CachedStore(FirestoreStore(cfg.get("FIREBASE_CREDENTIALS", "")), ttl=cfg.get("CACHE_TTL_SECONDS", 0))

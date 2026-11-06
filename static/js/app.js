@@ -33,15 +33,16 @@ const lab = (v) => L[v] ?? (v === "" || v == null ? "—" : String(v));
 const opts = (keys) => keys.map((k) => ({ value: k, label: lab(k) }));
 const badge = (v) => `<span class="badge ${esc(v)}">${esc(lab(v))}</span>`;
 
-async function api(method, url, body) {
+async function request(method, url, body) {
   const init = { method, credentials: "same-origin", headers: { "X-CSRF-Token": CSRF } };
   if (body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(body); }
   const resp = await fetch(url, init);
   if (resp.status === 401) { location.href = "/login"; throw new Error("Sessão expirada."); }
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) { const e = new Error(data.erro || "Erro inesperado."); e.fields = data.campos || {}; throw e; }
-  return data;
+  return { data, resp };
 }
+const api = async (method, url, body) => (await request(method, url, body)).data;
 
 function toast(msg, kind = "ok") {
   const el = document.createElement("div");
@@ -250,18 +251,35 @@ function crudPage(cfg) {
     <div class="page-head"><div><h1>${esc(cfg.title)}</h1><p class="sub">${esc(cfg.subtitle || "")}</p></div>
       <button class="btn primary" id="btn-new">+ ${esc(cfg.newLabel || "Novo")}</button></div>
     <form class="filters card" id="filters" autocomplete="off" ${(cfg.filters || []).length ? "" : "hidden"}>${(cfg.filters || []).map(filterHtml).join("")}<button class="btn ghost" type="reset">Limpar</button></form>
-    <div class="card table-card"><div class="table-scroll" id="table"></div><p class="count" id="count"></p></div>`;
-  let rows = [];
+    <div class="card table-card"><div class="table-scroll" id="table"></div><div class="pager" id="pager"></div></div>`;
+  let rows = [], page = 1, perPage = 25, total = 0, pages = 1;
 
   const load = async () => {
     const qs = new URLSearchParams();
     new FormData($("#filters")).forEach((v, k) => { if (String(v).trim()) qs.append(k, String(v).trim()); });
-    try { rows = await api("GET", `${cfg.endpoint}?${qs}`); render(); } catch (e) { fail(e); }
+    qs.set("pagina", page); qs.set("por_pagina", perPage);
+    try {
+      const { data, resp } = await request("GET", `${cfg.endpoint}?${qs}`);
+      rows = data;
+      total = +(resp.headers.get("X-Total-Count") ?? data.length);
+      page = +(resp.headers.get("X-Page") ?? 1);  // o servidor corrige páginas além do fim
+      pages = +(resp.headers.get("X-Total-Pages") ?? 1);
+      render();
+    } catch (e) { fail(e); }
+  };
+
+  const renderPager = () => {
+    const from = total ? (page - 1) * perPage + 1 : 0, to = total ? from + rows.length - 1 : 0;
+    $("#pager").innerHTML = `<span>${total ? `Mostrando ${from}–${to} de ${total} registro${total === 1 ? "" : "s"}` : "0 registros"}</span>
+      <span class="ctl"><label>Por página <select data-per>${[10, 25, 50, 100].map((n) => `<option ${n === perPage ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+        <button class="btn small" data-go="${page - 1}" ${page <= 1 ? "disabled" : ""}>‹ Anterior</button>
+        <span>Página ${page} de ${pages}</span>
+        <button class="btn small" data-go="${page + 1}" ${page >= pages ? "disabled" : ""}>Próxima ›</button></span>`;
   };
 
   const render = () => {
     const wrap = $("#table");
-    $("#count").textContent = `${rows.length} registro${rows.length === 1 ? "" : "s"}`;
+    renderPager();
     if (!rows.length) { wrap.innerHTML = `<p class="empty">Nenhum registro encontrado.</p>`; return; }
     const showActions = !cfg.noEdit || canDelete;
     wrap.innerHTML = `<table><thead><tr>${cfg.columns.map((c) => `<th>${esc(c.label)}</th>`).join("")}${showActions ? "<th></th>" : ""}</tr></thead>
@@ -290,10 +308,23 @@ function crudPage(cfg) {
     }
   });
 
+  $("#pager").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-go]");
+    if (!b || b.disabled) return;
+    page = +b.dataset.go;
+    await load();
+    $(".page-head").scrollIntoView({ block: "start" });
+  });
+  $("#pager").addEventListener("change", (e) => {
+    if (!e.target.matches("[data-per]")) return;
+    perPage = +e.target.value; page = 1; load();
+  });
+
   const f = $("#filters");
-  f.addEventListener("input", debounce(load));
-  f.addEventListener("change", load);
-  f.addEventListener("reset", () => setTimeout(load, 0));
+  const reload = () => { page = 1; load(); };  // qualquer mudança de filtro volta para a página 1
+  f.addEventListener("input", debounce(reload));
+  f.addEventListener("change", reload);
+  f.addEventListener("reset", () => setTimeout(reload, 0));
   f.addEventListener("submit", (e) => e.preventDefault());
   load();
 }
