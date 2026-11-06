@@ -9,7 +9,7 @@
 </head>
 <body class="auth">
   <main class="auth-card">
-    <div class="auth-brand"><span class="brand-mark" aria-hidden="true">🐾</span>
+    <div class="auth-brand"><img src="{{ url_for('static', filename='ajapra_logo.png') }}" class="brand-mark">
       <div><h1>AJAPRA</h1><p>Sistema de gestão de adoções</p></div></div>
     <form method="post" class="form" autocomplete="on">
       <input type="hidden" name="csrf_token" value="{{ session.csrf }}">

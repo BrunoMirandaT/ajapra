@@ -12,6 +12,7 @@ const IS_ADMIN = ME.perfil === "admin";
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const fmtMes = (ym) => `${MESES[+ym.slice(5, 7) - 1]}/${ym.slice(2, 4)}`;
+const fmtMesLongo = (ym) => { const m = MESES_LONGOS[+ym.slice(5, 7) - 1]; return `${m[0].toUpperCase()}${m.slice(1)} de ${ym.slice(0, 4)}`; };
 const fmtData = (iso) => (iso ? iso.split("-").reverse().join("/") : "—");
 const fmtCpf = (c) => (c && c.length === 11 ? `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}` : c || "—");
 const fmtTel = (t) => (t && t.length >= 10 ? `(${t.slice(0, 2)}) ${t.slice(2, t.length - 4)}-${t.slice(-4)}` : t || "—");
@@ -135,6 +136,43 @@ function yAxis(l, r, t, ih, W, max) {
   return g;
 }
 
+/* Balão de valores. Mostra os dados do elemento `sel` sob o mouse ou com foco:
+   data-t (título), data-v / data-r (linhas) ou data-lines (JSON [[série, texto], ...]).
+   Um filho com [data-anchor] define o ponto onde o balão é ancorado. */
+function chartTip(el, sel) {
+  el.classList.add("chart-wrap");
+  const getTip = () => {
+    let t = $(".chart-tip", el);
+    if (!t) { t = document.createElement("div"); t.className = "chart-tip"; t.setAttribute("role", "tooltip"); t.hidden = true; el.appendChild(t); }
+    return t;
+  };
+  const show = (c) => {
+    const tip = getTip();
+    tip.replaceChildren();
+    const title = document.createElement("b"); title.textContent = c.dataset.t; tip.append(title);
+    const rows = c.dataset.lines ? JSON.parse(c.dataset.lines) : [[-1, c.dataset.v], ...(c.dataset.r ? [[-2, c.dataset.r]] : [])];
+    rows.forEach(([k, text]) => {
+      const d = document.createElement("div");
+      if (k >= 0) { const sw = document.createElement("i"); sw.className = `sw s${k}`; d.append(sw); }
+      if (k === -2) d.className = "note";
+      d.append(text); tip.append(d);
+    });
+    tip.hidden = false;
+    const a = c.querySelector("[data-anchor]") || c;
+    const er = el.getBoundingClientRect(), ar = a.getBoundingClientRect(), half = tip.offsetWidth / 2;
+    const cx = ar.left + ar.width / 2 - er.left;
+    tip.style.left = `${Math.min(Math.max(cx, half), el.clientWidth - half)}px`;  // não sai da área do gráfico
+    tip.style.top = `${ar.top + ar.height / 2 - er.top - 8}px`;
+  };
+  const hide = () => { const t = $(".chart-tip", el); if (t) t.hidden = true; };
+  if (el._tipBound) return;  // listeners são registrados uma vez por contêiner
+  el._tipBound = true;
+  el.addEventListener("mouseover", (e) => { const c = e.target.closest(sel); if (c && el.contains(c)) show(c); });
+  el.addEventListener("mouseout", (e) => { if (e.target.closest(sel)) hide(); });
+  el.addEventListener("focusin", (e) => { const c = e.target.closest(sel); if (c) show(c); });
+  el.addEventListener("focusout", hide);
+}
+
 function barChart(el, labels, series) {
   const W = 720, H = 260, l = 38, r = 8, t = 12, b = 30, iw = W - l - r, ih = H - t - b;
   const max = niceMax(Math.max(1, ...series.flatMap((s) => s.values)));
@@ -144,20 +182,26 @@ function barChart(el, labels, series) {
     const gx = l + i * gw + (gw - bw * series.length) / 2;
     series.forEach((s, k) => {
       const h = (ih * s.values[i]) / max;
-      g += `<rect class="bar s${k}" x="${gx + k * bw}" y="${t + ih - h}" width="${Math.max(bw - 1, 1)}" height="${h}" rx="2"><title>${esc(fmtMes(lb))} · ${esc(s.name)}: ${s.values[i]}</title></rect>`;
+      g += `<rect class="bar s${k}" x="${gx + k * bw}" y="${t + ih - h}" width="${Math.max(bw - 1, 1)}" height="${h}" rx="2"/>`;
     });
+    const topo = t + ih - (ih * Math.max(...series.map((s) => s.values[i]))) / max;  // topo da maior barra do mês
+    const linhas = JSON.stringify(series.map((s, k) => [k, `${s.name}: ${s.values[i]}`]));
+    g += `<g class="bar-col" data-t="${esc(fmtMesLongo(lb))}" data-lines="${esc(linhas)}"><rect class="bar-hit" x="${l + i * gw}" y="${t}" width="${gw}" height="${ih}"/>`
+      + `<rect class="anchor" data-anchor x="${l + i * gw + gw / 2}" y="${topo}" width="1" height="1"/></g>`;
     if (i % step === 0) g += `<text class="axis" x="${l + i * gw + gw / 2}" y="${H - 10}" text-anchor="middle">${esc(fmtMes(lb))}</text>`;
   });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de barras mensal">${g}</svg>
     <div class="legend">${series.map((s, k) => `<span><i class="sw s${k}"></i>${esc(s.name)}</span>`).join("")}</div>`;
+  chartTip(el, ".bar-col");
 }
 
 function hBars(el, items, labelFn = (x) => x) {
   if (!items.length) { el.innerHTML = `<p class="hint">Sem dados no período.</p>`; return; }
   const max = Math.max(...items.map((i) => i.valor));
-  el.innerHTML = `<div class="hbars">${items.map((i) => `<div class="hbar"><span>${esc(labelFn(i.nome))}</span>
-    <svg viewBox="0 0 100 12" preserveAspectRatio="none" role="img" aria-label="${esc(labelFn(i.nome))}: ${i.valor}"><rect class="bg" width="100" height="12" rx="3"/><rect width="${(i.valor / max) * 100}" height="12" rx="3"/></svg>
+  el.innerHTML = `<div class="hbars">${items.map((i) => `<div class="hbar" data-t="${esc(labelFn(i.nome))}" data-v="${i.valor} ${i.valor === 1 ? "adoção" : "adoções"}"><span>${esc(labelFn(i.nome))}</span>
+    <svg viewBox="0 0 100 12" preserveAspectRatio="none" role="img" aria-label="${esc(labelFn(i.nome))}: ${i.valor}"><rect class="bg" width="100" height="12" rx="3"/><rect data-anchor width="${(i.valor / max) * 100}" height="12" rx="3"/></svg>
     <b>${i.valor}</b></div>`).join("")}</div>`;
+  chartTip(el, ".hbar");
 }
 
 function forecastChart(el, hist, fc) {
@@ -175,11 +219,19 @@ function forecastChart(el, hist, fc) {
   let g = yAxis(l, r, t, ih, W, max);
   g += `<rect class="fc-zone" x="${x(n - 1)}" y="${t}" width="${x(all - 1) - x(n - 1)}" height="${ih}"/>`;
   g += `<path class="band" d="${band}"/><path class="line-hist" d="${pHist}"/><path class="line-fc" d="${pFc}"/>`;
-  show.forEach((h, i) => { g += `<circle class="dot-h" cx="${x(i)}" cy="${y(h.valor)}" r="3"><title>${esc(fmtMes(h.mes))}: ${h.valor} cadastros</title></circle>`; });
-  fc.forEach((f, j) => { g += `<circle class="dot-f" cx="${x(n + j)}" cy="${y(f.estimativa)}" r="4.5"><title>${esc(fmtMes(f.mes))}: ~${f.inteiro} (entre ${f.minimo} e ${f.maximo})</title></circle>`; });
+  // Pontos + área de captura maior (r=12) que mostra o balão ao passar o mouse, tocar ou focar com Tab
+  show.forEach((h, i) => {
+    g += `<circle class="dot-h" cx="${x(i)}" cy="${y(h.valor)}" r="3"/>`;
+    g += `<circle class="hit h" cx="${x(i)}" cy="${y(h.valor)}" r="12" data-t="${esc(fmtMes(h.mes))}" data-v="${h.valor} animais cadastrados"/>`;
+  });
+  fc.forEach((f, j) => {
+    g += `<circle class="dot-f" cx="${x(n + j)}" cy="${y(f.estimativa)}" r="4.5"/>`;
+    g += `<circle class="hit f" tabindex="0" cx="${x(n + j)}" cy="${y(f.estimativa)}" r="12" data-t="${esc(fmtMes(f.mes))} · estimativa" data-v="~${f.inteiro} animais" data-r="Faixa provável: ${f.minimo} a ${f.maximo}"/>`;
+  });
   all_labels.forEach((m, i) => { if (i % step === 0 || i === all - 1) g += `<text class="axis" x="${x(i)}" y="${H - 10}" text-anchor="middle">${esc(fmtMes(m))}</text>`; });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histórico de cadastros e previsão dos próximos meses">${g}</svg>
     <div class="legend"><span><i class="sw s0"></i>Cadastros realizados</span><span><i class="sw s1"></i>Estimativa</span><span>Faixa sombreada: intervalo de 80%</span></div>`;
+  chartTip(el, ".hit");
 }
 
 /* ============================ Páginas CRUD genéricas ============================ */
