@@ -87,7 +87,8 @@ body:not(.auth) {
 }
 
 .brand-mark {
-  font-size: 1.7rem;
+  width: 80px;
+  height: 80px;
 }
 
 .brand strong {
