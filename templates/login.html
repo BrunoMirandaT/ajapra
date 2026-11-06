@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · AJAPRA</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%BE%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth">
+  <main class="auth-card">
+    <div class="auth-brand"><span class="brand-mark" aria-hidden="true">🐾</span>
+      <div><h1>AJAPRA</h1><p>Sistema de gestão de adoções</p></div></div>
+    <form method="post" class="form" autocomplete="on">
+      <input type="hidden" name="csrf_token" value="{{ session.csrf }}">
+      <label class="field"><span>E-mail</span>
+        <input type="email" name="email" required autofocus autocomplete="username"></label>
+      <label class="field"><span>Senha</span>
+        <input type="password" name="senha" required autocomplete="current-password"></label>
+      {% if erro %}<p class="form-error" role="alert">{{ erro }}</p>{% endif %}
+      <button class="btn primary block" type="submit">Entrar</button>
+    </form>
+    {% if demo_mode %}
+    <p class="hint">Demonstração: <code>admin@ajapra.org</code> / <code>admin123</code></p>
+    {% endif %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Erro {{ codigo }} · AJAPRA</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%BE%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth">
+  <main class="auth-card">
+    <h1>{{ codigo }}</h1>
+    <p>{% if codigo == 404 %}Página não encontrada.{% elif codigo == 403 %}Você não tem permissão para acessar esta página.{% else %}Ocorreu um erro inesperado.{% endif %}</p>
+    <p><a class="btn primary" href="{{ url_for('page_dashboard') }}">Voltar ao painel</a></p>
+  </main>
+</body>
+</html>
